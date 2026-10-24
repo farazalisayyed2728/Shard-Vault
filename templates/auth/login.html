@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card" style="max-width: 400px; margin: auto;">
+    <h2>Log In</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% for field in form %}
+            <div class="input-group">
+                {{ field.label_tag }}
+                {{ field }}
+                {{ field.errors }}
+                {% if 'password' in field.name %}
+                    <button type="button" class="toggle-password btn" data-target="{{ field.id_for_label }}" aria-pressed="false" style="margin-top: 5px; font-size: 0.8rem;">Show password</button>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn" style="width: 100%;">Log In</button>
+    </form>
+    <p style="margin-top: 1rem;"><a href="{% url 'password_reset' %}">Forgot password?</a></p>
+</div>
+{% endblock %}
