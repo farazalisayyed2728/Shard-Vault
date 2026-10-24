@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShardVault</title>
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <header>
+        <div class="logo"><strong>ShardVault</strong></div>
+        <button id="mobile-menu-btn" aria-expanded="false" aria-label="Toggle menu">☰</button>
+        <nav id="main-nav">
+            {% if user.is_authenticated %}
+                <span>{{ user.username }}</span>
+                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn">Log Out</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Log In</a>
+                <a href="{% url 'register' %}" class="btn">Sign Up</a>
+            {% endif %}
+            <button id="theme-toggle" class="btn" aria-label="Toggle theme">🌓 Theme</button>
+        </nav>
+    </header>
+    
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <main id="main">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
