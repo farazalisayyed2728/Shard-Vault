@@ -82,6 +82,46 @@ services:
       node3:
         condition: service_healthy
 
+  celery-worker:
+    build: .
+    command: celery -A config worker -l INFO
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DATABASE_URL=postgres://sv_user:sv_pass@db:5432/shardvault
+      - REDIS_URL=redis://redis:6379/1
+      - HMAC_SECRET=dev-hmac-secret-do-not-use-in-prod
+      - SECRET_KEY=dev-secret-key-do-not-use-in-prod
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      node1:
+        condition: service_healthy
+      node2:
+        condition: service_healthy
+      node3:
+        condition: service_healthy
+
+  celery-beat:
+    build: .
+    command: celery -A config beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DATABASE_URL=postgres://sv_user:sv_pass@db:5432/shardvault
+      - REDIS_URL=redis://redis:6379/1
+      - HMAC_SECRET=dev-hmac-secret-do-not-use-in-prod
+      - SECRET_KEY=dev-secret-key-do-not-use-in-prod
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   node1_data:

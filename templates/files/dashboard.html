@@ -8,6 +8,16 @@
             <div class="progress-bar-fill" style="background:var(--primary-color); height:100%; width:{{ usage_pct }}%; border-radius:5px;"></div>
         </div>
     </div>
+
+    <div class="bento-card span-4">
+        <h3>Cluster Health</h3>
+        <ul id="node-status-list" style="list-style:none; padding:0; margin:0 0 1rem 0;">
+            <li>Loading node status...</li>
+        </ul>
+        <p style="margin:0; font-size:0.9rem;">
+            Chunks needing repair: <strong id="repair-count">--</strong>
+        </p>
+    </div>
     
     <div class="bento-card span-8">
         <h3>Upload File</h3>
@@ -40,4 +50,48 @@
     </div>
 </div>
 <script src="/static/js/upload.js"></script>
+<script>
+    async function pollClusterStatus() {
+        if (document.hidden) return;
+
+        const list = document.getElementById('node-status-list');
+        try {
+            const response = await fetch("{% url 'cluster_status' %}", {
+                headers: {'Accept': 'application/json'}
+            });
+            if (!response.ok) {
+                throw new Error(`Cluster status request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            list.replaceChildren();
+            for (const node of data.nodes) {
+                const item = document.createElement('li');
+                item.append(document.createTextNode(`${node.name}: `));
+                const status = document.createElement('span');
+                status.textContent = node.status;
+                status.style.color = node.status === 'healthy'
+                    ? 'var(--success-color)'
+                    : 'var(--error-color)';
+                item.append(status);
+                list.append(item);
+            }
+            if (data.nodes.length === 0) {
+                const item = document.createElement('li');
+                item.textContent = 'No storage nodes registered';
+                list.append(item);
+            }
+            document.getElementById('repair-count').textContent = data.under_replicated;
+        } catch (error) {
+            console.error('Could not load cluster status', error);
+            list.replaceChildren();
+            const item = document.createElement('li');
+            item.textContent = 'Cluster status unavailable';
+            list.append(item);
+        }
+    }
+
+    setInterval(pollClusterStatus, 10000);
+    pollClusterStatus();
+</script>
 {% endblock %}

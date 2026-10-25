@@ -6,12 +6,14 @@ import httpx
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Count, Q
 from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.models import User
+from .constants import REPLICATION_FACTOR
 from .models import Chunk, Replica, StorageNode, StoredFile
 from .utils import (
     decrypt_data,
@@ -171,3 +173,20 @@ def delete_file(request, file_id):
         user.used_bytes = max(0, user.used_bytes - f.original_size)
         user.save()
     return redirect('file_list')
+
+
+@login_required
+@require_http_methods(["GET"])
+def cluster_status(request):
+    nodes = list(StorageNode.objects.values('name', 'status').order_by('id'))
+    under_replicated = (
+        Chunk.objects.annotate(
+            ok_replicas=Count('replica', filter=Q(replica__state='ok'), distinct=True)
+        )
+        .filter(ok_replicas__lt=REPLICATION_FACTOR)
+        .count()
+    )
+    return JsonResponse({
+        'nodes': nodes,
+        'under_replicated': under_replicated,
+    })

@@ -8,6 +8,7 @@ urlpatterns = [
     path('api/uploads/', views.init_upload, name='init_upload'),
     path('api/uploads/<uuid:upload_id>/chunks/<int:index>/', views.upload_chunk, name='upload_chunk'),
     path('api/uploads/<uuid:upload_id>/complete/', views.complete_upload, name='complete_upload'),
+    path('api/status/', views.cluster_status, name='cluster_status'),
     path('download/<uuid:file_id>/', views.download_file, name='download_file'),
     path('delete/<uuid:file_id>/', views.delete_file, name='delete_file'),
 ]
