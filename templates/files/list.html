@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Files</h2>
+<form method="get" style="margin-bottom: 1rem;">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search files (press '/' to focus)" id="search-input" style="padding:0.5rem; width:300px;">
+    <button type="submit" class="btn">Search</button>
+</form>
+
+<div class="bento-card">
+    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <tr><th>Name</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr>
+        {% for file in page_obj %}
+        <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 1rem 0;">{{ file.display_name }} <br><small>Updated: {{ file.updated_at|timesince }} ago</small></td>
+            <td>{{ file.original_size|filesizeformat }}</td>
+            <td>{{ file.created_at|date:"M d, Y" }}</td>
+            <td>
+                <a href="{% url 'download_file' file.internal_key %}" class="btn">↓</a>
+                <form action="{% url 'delete_file' file.internal_key %}" method="post" style="display:inline;" onsubmit="return confirm('Move to trash?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn" style="background:var(--error-color);">🗑️</button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No files found.</td></tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
