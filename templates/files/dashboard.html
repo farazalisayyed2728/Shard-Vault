@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="bento-grid">
+    <div class="bento-card span-4">
+        <h3>Storage Usage</h3>
+        <p>{{ used_mb }} MB / {{ quota_mb }} MB</p>
+        <div class="progress-bar-bg" style="background:var(--border-color); height:10px; border-radius:5px;">
+            <div class="progress-bar-fill" style="background:var(--primary-color); height:100%; width:{{ usage_pct }}%; border-radius:5px;"></div>
+        </div>
+    </div>
+    
+    <div class="bento-card span-8">
+        <h3>Upload File</h3>
+        <div id="upload-zone" style="border: 2px dashed var(--border-color); padding: 2rem; text-align: center; border-radius: var(--radius-md);">
+            <input type="file" id="file-input" style="display:none;">
+            <button class="btn" onclick="document.getElementById('file-input').click()">Select File</button>
+            <p>or drag and drop here</p>
+            <div id="upload-progress-container" style="display:none; margin-top:1rem;">
+                <p id="upload-status">Uploading...</p>
+                <progress id="upload-progress" value="0" max="100" style="width:100%;"></progress>
+            </div>
+        </div>
+    </div>
+
+    <div class="bento-card span-12">
+        <h3>Recent Files</h3>
+        <table style="width: 100%; text-align: left; border-collapse: collapse;">
+            <tr><th>Name</th><th>Size</th><th>Date</th><th>Actions</th></tr>
+            {% for file in recent_files %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 0.5rem 0;">{{ file.display_name }}</td>
+                <td>{{ file.original_size|filesizeformat }}</td>
+                <td>{{ file.created_at|date:"M d, Y" }}</td>
+                <td><a href="{% url 'download_file' file.internal_key %}" class="btn">Download</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No files uploaded yet.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+<script src="/static/js/upload.js"></script>
+{% endblock %}
