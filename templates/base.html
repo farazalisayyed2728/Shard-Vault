@@ -17,16 +17,16 @@
         <button id="mobile-menu-btn" aria-expanded="false" aria-label="Toggle menu">☰</button>
         <nav id="main-nav">
             {% if user.is_authenticated %}
-                <span>{{ user.username }}</span>
+                <a href="{% url 'dashboard' %}">Dashboard</a>
+                <a href="{% url 'file_list' %}">My Files</a>
+                <a href="{% url 'trash' %}">Trash</a>
+                <span>Usage: {{ request.user.used_bytes|filesizeformat }}</span>
                 <form action="{% url 'logout' %}" method="post" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn">Log Out</button>
                 </form>
-            {% else %}
-                <a href="{% url 'login' %}">Log In</a>
-                <a href="{% url 'register' %}" class="btn">Sign Up</a>
             {% endif %}
-            <button id="theme-toggle" class="btn" aria-label="Toggle theme">🌓 Theme</button>
+            <button id="theme-toggle" class="btn">🌓 Theme</button>
         </nav>
     </header>
     
