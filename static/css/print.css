@@ -1,0 +1,7 @@
+@media print {
+    header, nav, .btn, #upload-zone, #scroll-progress, #back-to-top { display: none !important; }
+    body { background: white; color: black; }
+    .bento-card { border: none; box-shadow: none; padding: 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+}
