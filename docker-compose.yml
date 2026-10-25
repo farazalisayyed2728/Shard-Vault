@@ -21,6 +21,42 @@ services:
       timeout: 5s
       retries: 5
 
+  node1:
+    build: ./storage_node
+    volumes:
+      - node1_data:/data
+    environment:
+      - HMAC_SECRET=dev-hmac-secret-do-not-use-in-prod
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  node2:
+    build: ./storage_node
+    volumes:
+      - node2_data:/data
+    environment:
+      - HMAC_SECRET=dev-hmac-secret-do-not-use-in-prod
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  node3:
+    build: ./storage_node
+    volumes:
+      - node3_data:/data
+    environment:
+      - HMAC_SECRET=dev-hmac-secret-do-not-use-in-prod
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -32,12 +68,22 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings.dev
       - DATABASE_URL=postgres://sv_user:sv_pass@db:5432/shardvault
       - REDIS_URL=redis://redis:6379/1
+      - HMAC_SECRET=dev-hmac-secret-do-not-use-in-prod
       - SECRET_KEY=dev-secret-key-do-not-use-in-prod
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      node1:
+        condition: service_healthy
+      node2:
+        condition: service_healthy
+      node3:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  node1_data:
+  node2_data:
+  node3_data:

@@ -1,9 +1,11 @@
+import hashlib
+import hmac
 import os
 import time
-import hmac
-import hashlib
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from django.conf import settings
+
 
 def generate_encryption_key():
     return AESGCM.generate_key(bit_length=256)
