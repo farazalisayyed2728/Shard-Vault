@@ -28,6 +28,7 @@ class StoredFile(models.Model):
 
 class Chunk(models.Model):
     file = models.ForeignKey(StoredFile, on_delete=models.CASCADE)
+    chunk_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     chunk_index = models.IntegerField()
     plaintext_size = models.IntegerField()
     plaintext_sha256 = models.CharField(max_length=64, blank=True)
