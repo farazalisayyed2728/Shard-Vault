@@ -1,0 +1,22 @@
+.bento-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(12, 1fr);
+}
+.bento-card {
+    background: var(--surface-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+.span-4 { grid-column: span 4; }
+.span-8 { grid-column: span 8; }
+.span-12 { grid-column: span 12; }
+#scroll-progress {
+    position: fixed; top: 0; left: 0; height: 3px; background: var(--primary-color);
+    width: 0%; z-index: 1000; transition: width 0.1s;
+}
+@media (max-width: 768px) {
+    .span-4, .span-8, .span-12 { grid-column: span 12; }
+}
