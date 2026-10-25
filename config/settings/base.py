@@ -6,6 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
 
 SECRET_KEY = env('SECRET_KEY', default='unsafe-secret')
+HMAC_SECRET = env('HMAC_SECRET', default='dev-hmac-secret-do-not-use-in-prod')
 DEBUG = False
 ALLOWED_HOSTS = []
 
@@ -17,7 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'apps.accounts',
-    'apps.files',  # Added files app
+    'apps.files',
 ]
 
 MIDDLEWARE = [
@@ -72,9 +73,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
