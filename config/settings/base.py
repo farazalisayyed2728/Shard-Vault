@@ -22,7 +22,13 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.files',
     'apps.audit',
+    'rest_framework',
+    'drf_spectacular',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -101,3 +107,38 @@ AXES_LOCKOUT_TEMPLATE = 'errors/429.html'
 CSP_DEFAULT_SRC = ("'self'",)
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
 CSP_SCRIPT_SRC = ("'self'",)
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ShardVault API',
+    'DESCRIPTION': 'Distributed File Storage System API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}',
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'apps': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
