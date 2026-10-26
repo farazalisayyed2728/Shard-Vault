@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Share {{ file.display_name }}</h2>
-<p>Your share link is ready:</p>
-<p><a href="{% url 'public_share_download' raw_token %}">{% url 'public_share_download' raw_token %}</a></p>
+<div class="card" style="max-width: 600px; margin: auto; text-align: center;">
+    <h2>Share Link Created</h2>
+    <p>File: {{ file.display_name }}</p>
+    <input type="text" value="{{ request.scheme }}://{{ request.get_host }}/files/s/{{ raw_token }}/" readonly style="width: 100%; padding: 10px; margin-bottom: 20px;" id="share-url">
+    <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('share-url').value); alert('Copied!');">Copy Link</button>
+    <br><br>
+    <a href="{% url 'file_list' %}">Back to My Files</a>
+</div>
 {% endblock %}
