@@ -16,6 +16,10 @@
             <td>{{ file.created_at|date:"M d, Y" }}</td>
             <td>
                 <a href="{% url 'download_file' file.internal_key %}" class="btn">↓</a>
+                <form action="{% url 'create_share_link' file.internal_key %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn">Share</button>
+                </form>
                 <form action="{% url 'delete_file' file.internal_key %}" method="post" style="display:inline;" onsubmit="return confirm('Move to trash?');">
                     {% csrf_token %}
                     <button type="submit" class="btn" style="background:var(--error-color);">🗑️</button>
