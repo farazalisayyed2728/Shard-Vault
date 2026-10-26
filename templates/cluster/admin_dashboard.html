@@ -1,35 +1,36 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Cluster administration</h2>
-<h3>Storage nodes</h3>
-<div class="bento-card">
-    <table style="width: 100%; text-align: left; border-collapse: collapse;">
-        <tr><th>Name</th><th>Status</th><th>Last heartbeat</th></tr>
-        {% for node in nodes %}
-        <tr>
-            <td>{{ node.name }}</td>
-            <td>{{ node.status }}</td>
-            <td>{{ node.last_heartbeat }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="3">No storage nodes found.</td></tr>
-        {% endfor %}
-    </table>
-</div>
-<h3>Recent audit logs</h3>
-<div class="bento-card">
-    <table style="width: 100%; text-align: left; border-collapse: collapse;">
-        <tr><th>Action</th><th>Object</th><th>Actor</th><th>Timestamp</th></tr>
-        {% for log in logs %}
-        <tr>
-            <td>{{ log.action }}</td>
-            <td>{{ log.object_type }} {{ log.object_id }}</td>
-            <td>{{ log.actor|default:"Anonymous" }}</td>
-            <td>{{ log.timestamp }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="4">No audit logs found.</td></tr>
-        {% endfor %}
-    </table>
+<h2>Admin Cluster Dashboard</h2>
+<div class="bento-grid">
+    <div class="bento-card span-12">
+        <h3>Storage Nodes</h3>
+        <table style="width: 100%; text-align: left; border-collapse: collapse;">
+            <tr><th>Name</th><th>Internal URL</th><th>Status</th><th>Last Heartbeat</th></tr>
+            {% for node in nodes %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td>{{ node.name }}</td>
+                <td>{{ node.internal_url }}</td>
+                <td style="color: {% if node.status == 'healthy' %}var(--success-color){% else %}var(--error-color){% endif %};">{{ node.status }}</td>
+                <td>{{ node.last_heartbeat|timesince }} ago</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    
+    <div class="bento-card span-12">
+        <h3>Recent Audit Logs</h3>
+        <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 0.9em;">
+            <tr><th>Time</th><th>User</th><th>Action</th><th>Target</th><th>IP</th></tr>
+            {% for log in logs %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td>{{ log.timestamp|date:"M d H:i:s" }}</td>
+                <td>{{ log.actor.username|default:"Anonymous" }}</td>
+                <td>{{ log.action }}</td>
+                <td>{{ log.object_type }} ({{ log.object_id|truncatechars:10 }})</td>
+                <td>{{ log.ip_address }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 </div>
 {% endblock %}
