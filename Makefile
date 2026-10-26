@@ -13,3 +13,9 @@ migrate:
 
 test:
 	docker-compose exec web pytest
+
+lint:
+	docker-compose exec web ruff check .
+
+format:
+	docker-compose exec web ruff format .
