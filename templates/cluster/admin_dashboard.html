@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Cluster administration</h2>
+<h3>Storage nodes</h3>
+<div class="bento-card">
+    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <tr><th>Name</th><th>Status</th><th>Last heartbeat</th></tr>
+        {% for node in nodes %}
+        <tr>
+            <td>{{ node.name }}</td>
+            <td>{{ node.status }}</td>
+            <td>{{ node.last_heartbeat }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">No storage nodes found.</td></tr>
+        {% endfor %}
+    </table>
+</div>
+<h3>Recent audit logs</h3>
+<div class="bento-card">
+    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <tr><th>Action</th><th>Object</th><th>Actor</th><th>Timestamp</th></tr>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.action }}</td>
+            <td>{{ log.object_type }} {{ log.object_id }}</td>
+            <td>{{ log.actor|default:"Anonymous" }}</td>
+            <td>{{ log.timestamp }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No audit logs found.</td></tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

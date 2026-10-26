@@ -1,20 +1,24 @@
 import concurrent.futures
 import hashlib
 import json
+import secrets
 
 import httpx
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q
-from django.http import JsonResponse, StreamingHttpResponse
+from django.db.models import Count, F, Q
+from django.http import Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_http_methods
 
 from apps.accounts.models import User
+from apps.audit.models import AuditLog
+from apps.audit.utils import log_audit
 from .constants import REPLICATION_FACTOR
-from .models import Chunk, Replica, StorageNode, StoredFile
+from .models import Chunk, Replica, ShareLink, StorageNode, StoredFile
 from .utils import (
     decrypt_data,
     encrypt_data,
@@ -116,51 +120,27 @@ def upload_chunk(request, upload_id, index):
 @require_http_methods(["POST"])
 def complete_upload(request, upload_id):
     f = get_object_or_404(StoredFile, internal_key=upload_id, owner=request.user, status='uploading')
-    
+
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=request.user.pk)
         if user.used_bytes + f.original_size > user.quota_bytes:
             return JsonResponse({'error': 'Quota exceeded'}, status=400)
-        
+
         user.used_bytes += f.original_size
         user.save()
         f.status = 'ready'
         f.sha256_checksum = json.loads(request.body).get('sha256_checksum', '')
         f.save()
-        
+
+    log_audit(request, 'upload_complete', 'StoredFile', f.internal_key)
     return JsonResponse({'status': 'complete'})
 
 @login_required
+@ratelimit(key='user', rate='30/m', block=True)
 def download_file(request, file_id):
     f = get_object_or_404(StoredFile, internal_key=file_id, owner=request.user, status='ready', deleted_at__isnull=True)
-    key = bytes(f.wrapped_data_key)
-    
-    def file_iterator():
-        for chunk in f.chunk_set.all().order_by('chunk_index'):
-            replicas = chunk.replica_set.filter(state='ok')
-            chunk_data = None
-            
-            for rep in replicas:
-                path = f"/chunks/{chunk.chunk_uuid}"
-                url = f"{rep.storage_node.internal_url}{path}"
-                headers = generate_hmac_headers("GET", path)
-                try:
-                    r = httpx.get(url, headers=headers, timeout=5.0)
-                    if r.status_code == 200:
-                        chunk_data = decrypt_data(key, bytes(chunk.encryption_nonce), r.content)
-                        break
-                except Exception:
-                    continue
-                    
-            if chunk_data:
-                yield chunk_data
-            else:
-                raise Exception("Chunk missing from all nodes")
-
-    response = StreamingHttpResponse(file_iterator(), content_type=f.mime_type or 'application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{f.display_name}"'
-    response['X-Content-Type-Options'] = 'nosniff'
-    return response
+    log_audit(request, 'download', 'StoredFile', f.internal_key)
+    return _stream_file(f)
 
 @login_required
 @require_http_methods(["POST"])
@@ -172,7 +152,93 @@ def delete_file(request, file_id):
         user = User.objects.select_for_update().get(pk=request.user.pk)
         user.used_bytes = max(0, user.used_bytes - f.original_size)
         user.save()
+    log_audit(request, 'soft_delete', 'StoredFile', f.internal_key)
     return redirect('file_list')
+
+@login_required
+@require_http_methods(["POST"])
+def create_share_link(request, file_id):
+    f = get_object_or_404(
+        StoredFile,
+        internal_key=file_id,
+        owner=request.user,
+        status='ready',
+        deleted_at__isnull=True,
+    )
+    raw_token = secrets.token_urlsafe(32)
+    max_downloads_value = request.POST.get('max_downloads')
+    try:
+        max_downloads = int(max_downloads_value) if max_downloads_value else None
+    except ValueError:
+        return JsonResponse({'error': 'max_downloads must be a positive integer'}, status=400)
+    if max_downloads is not None and max_downloads <= 0:
+        return JsonResponse({'error': 'max_downloads must be a positive integer'}, status=400)
+
+    hashed_token = hashlib.sha256(raw_token.encode()).hexdigest()
+    ShareLink.objects.create(
+        file=f,
+        hashed_token=hashed_token,
+        created_by=request.user,
+        max_downloads=max_downloads,
+    )
+    log_audit(request, 'share_created', 'ShareLink', f.internal_key)
+    return render(request, 'files/share_link.html', {'raw_token': raw_token, 'file': f})
+
+@ratelimit(key='ip', rate='10/m', block=True)
+def public_share_download(request, token):
+    hashed_token = hashlib.sha256(token.encode()).hexdigest()
+    link = get_object_or_404(ShareLink, hashed_token=hashed_token)
+
+    if link.revoked_at or (link.expires_at and link.expires_at < timezone.now()):
+        raise Http404("Link expired or revoked.")
+
+    with transaction.atomic():
+        link_lock = ShareLink.objects.select_related('file').select_for_update().get(pk=link.pk)
+        if link_lock.revoked_at or (link_lock.expires_at and link_lock.expires_at < timezone.now()):
+            raise Http404("Link expired or revoked.")
+        if link_lock.max_downloads and link_lock.current_downloads >= link_lock.max_downloads:
+            raise Http404("Download limit reached.")
+        f = link_lock.file
+        if f.status != 'ready' or f.deleted_at is not None:
+            raise Http404("File not available.")
+        link_lock.current_downloads = F('current_downloads') + 1
+        link_lock.save(update_fields=['current_downloads'])
+
+    log_audit(request, 'public_download', 'StoredFile', f.internal_key)
+    return _stream_file(f)
+
+def _stream_file(f):
+    key = bytes(f.wrapped_data_key)
+
+    def file_iterator():
+        for chunk in f.chunk_set.all().order_by('chunk_index'):
+            replicas = chunk.replica_set.filter(state='ok')
+            chunk_data = None
+            for rep in replicas:
+                path = f"/chunks/{chunk.chunk_uuid}"
+                url = f"{rep.storage_node.internal_url}{path}"
+                try:
+                    r = httpx.get(url, headers=generate_hmac_headers("GET", path), timeout=5.0)
+                    if r.status_code == 200:
+                        chunk_data = decrypt_data(key, bytes(chunk.encryption_nonce), r.content)
+                        break
+                except Exception:
+                    continue
+            if chunk_data is not None:
+                yield chunk_data
+            else:
+                raise Exception("Chunk missing")
+
+    response = StreamingHttpResponse(file_iterator(), content_type=f.mime_type or 'application/octet-stream')
+    response['Content-Disposition'] = f'attachment; filename="{f.display_name}"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_dashboard(request):
+    nodes = StorageNode.objects.all()
+    logs = AuditLog.objects.all()[:20]
+    return render(request, 'cluster/admin_dashboard.html', {'nodes': nodes, 'logs': logs})
 
 
 @login_required

@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Share {{ file.display_name }}</h2>
+<p>Your share link is ready:</p>
+<p><a href="{% url 'public_share_download' raw_token %}">{% url 'public_share_download' raw_token %}</a></p>
+{% endblock %}

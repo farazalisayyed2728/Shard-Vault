@@ -11,4 +11,7 @@ urlpatterns = [
     path('api/status/', views.cluster_status, name='cluster_status'),
     path('download/<uuid:file_id>/', views.download_file, name='download_file'),
     path('delete/<uuid:file_id>/', views.delete_file, name='delete_file'),
+    path('share/<uuid:file_id>/', views.create_share_link, name='create_share_link'),
+    path('shared/<str:token>/', views.public_share_download, name='public_share_download'),
+    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
 ]
