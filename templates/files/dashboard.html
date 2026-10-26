@@ -48,6 +48,22 @@
             {% endfor %}
         </table>
     </div>
+
+    <div class="bento-card span-12">
+        <h3>Frequently Asked Questions</h3>
+        <details style="margin-bottom: 1rem;">
+            <summary style="cursor:pointer; font-weight:bold;">How is my data encrypted?</summary>
+            <p style="margin-top:0.5rem; color:var(--text-secondary);">We use envelope encryption. Every file generates a unique AES-256-GCM data key. Chunks are encrypted locally before being distributed to storage nodes.</p>
+        </details>
+        <details style="margin-bottom: 1rem;">
+            <summary style="cursor:pointer; font-weight:bold;">What happens if a node goes offline?</summary>
+            <p style="margin-top:0.5rem; color:var(--text-secondary);">We enforce a replication factor of 3. If a node fails, your file is served from another healthy replica, and a background worker duplicates it to a new node to maintain redundancy.</p>
+        </details>
+        <details>
+            <summary style="cursor:pointer; font-weight:bold;">How long do Share Links last?</summary>
+            <p style="margin-top:0.5rem; color:var(--text-secondary);">You can define a maximum download limit or an expiration date when generating the link. You can also revoke them manually at any time.</p>
+        </details>
+    </div>
 </div>
 <script src="/static/js/upload.js"></script>
 <script>
