@@ -49,3 +49,15 @@ class Replica(models.Model):
 
     class Meta:
         unique_together = ('chunk', 'storage_node')
+
+
+
+class ShareLink(models.Model):
+    file = models.ForeignKey(StoredFile, on_delete=models.CASCADE)
+    hashed_token = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    max_downloads = models.IntegerField(null=True, blank=True)
+    current_downloads = models.IntegerField(default=0)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
