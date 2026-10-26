@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Trash</h2>
+<p style="color: var(--text-secondary); margin-bottom: 1rem;">
+    Files here will be permanently deleted after 7 days by the background garbage collection task.
+</p>
+
+<div class="bento-card">
+    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <tr><th>Name</th><th>Size</th><th>Deleted On</th></tr>
+        {% for file in files %}
+        <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 1rem 0;">
+                {{ file.display_name }} 
+                <br>
+                <small style="color: var(--error-color);">Status: Deleted</small>
+            </td>
+            <td>{{ file.original_size|filesizeformat }}</td>
+            <td>{{ file.deleted_at|date:"M d, Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="padding: 2rem 0; text-align: center; color: var(--text-secondary);">Your trash is empty.</td></tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
