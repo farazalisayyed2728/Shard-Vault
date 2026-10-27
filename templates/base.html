@@ -6,51 +6,86 @@
     <title>ShardVault</title>
     <link rel="stylesheet" href="/static/css/tokens.css">
     <link rel="stylesheet" href="/static/css/layout.css">
-    <link rel="stylesheet" href="/static/css/bento.css">
     <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/app.js" defer></script>
 </head>
 <body>
-    <a href="#main" class="skip-link">Skip to content</a>
-    <header>
-        <div class="logo"><strong>ShardVault</strong></div>
-        <button id="mobile-menu-btn" class="btn" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle menu">☰</button>
-        <nav id="main-nav">
-            {% if user.is_authenticated %}
-                <a href="{% url 'dashboard' %}">Dashboard</a>
-                <a href="{% url 'file_list' %}">My Files</a>
-                <a href="{% url 'trash' %}">Trash</a>
-                <span>Usage: {{ request.user.used_bytes|filesizeformat }}</span>
-                <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn">Log Out</button>
-                </form>
-            {% endif %}
-            <button id="theme-toggle" class="btn">🌓 Theme</button>
-        </nav>
-    </header>
+    <a href="#main" class="skip-link" style="position:absolute; left:-999px;">Skip to content</a>
     
-    {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-                <div class="alert {{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-    {% endif %}
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>ShardVault</h2>
+            </div>
+            
+            <nav class="nav-menu">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                        Dashboard
+                    </a>
+                    <a href="{% url 'file_list' %}" class="nav-item {% if request.resolver_match.url_name == 'file_list' %}active{% endif %}">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                        My Files
+                    </a>
+                    <a href="{% url 'trash' %}" class="nav-item {% if request.resolver_match.url_name == 'trash' %}active{% endif %}">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Trash
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="{% url 'admin_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Cluster Admin
+                    </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'login' %}" class="nav-item">Log In</a>
+                    <a href="{% url 'register' %}" class="nav-item">Register</a>
+                {% endif %}
+            </nav>
 
-    <main id="main">
-        {% block content %}{% endblock %}
-    </main>
-    <button id="back-to-top" class="btn" aria-label="Back to top" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000;">↑ Top</button>
+            <div class="sidebar-footer">
+                <button id="theme-toggle" class="btn btn-icon" aria-label="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                </button>
+                {% if user.is_authenticated %}
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn" style="width:100%;">Log Out</button>
+                </form>
+                {% endif %}
+            </div>
+        </aside>
 
-    <!-- Floating Contact Button -->
-    <button id="contact-button" class="btn" style="position:fixed; bottom:20px; left:20px; border-radius:50%; width:50px; height:50px; font-size:1.5rem; z-index:1000;" aria-label="Contact support">💬</button>
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button id="mobile-menu-btn" class="btn btn-icon mobile-toggle">☰</button>
+                <div class="search-container" style="flex:1; max-width: 400px; margin: 0 2rem;">
+                    <input type="text" class="neo-input" id="search-input" placeholder="Search files... (Press '/')">
+                </div>
+                <div class="user-profile">
+                    {% if user.is_authenticated %}
+                        <strong>{{ user.username }}</strong>
+                    {% endif %}
+                </div>
+            </header>
 
-    <!-- Cookie Notice -->
-    <div id="cookie-notice" style="display:none; position:fixed; bottom:0; left:0; right:0; background:var(--surface-color); padding:1rem; border-top:1px solid var(--border-color); z-index:1001; text-align:center;">
-        <p style="margin:0 0 1rem 0;">We use essential cookies for session management and authentication. No third-party tracking is used.</p>
-        <button id="accept-cookies" class="btn">Understood</button>
+            <div id="main" class="page-container">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="neo-card" style="margin-bottom: 1rem; padding: 1rem; border-left: 4px solid var(--accent-blue);">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
     </div>
 </body>
 </html>
