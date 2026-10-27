@@ -1,28 +1,154 @@
-.card {
-  background: var(--surface-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: 2rem;
-  border: 1px solid var(--border-color);
+/* Cards */
+.neo-card {
+    background: var(--surface-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-raised);
+    padding: 2rem;
+    border: 1px solid var(--border-color);
+    transition: transform var(--transition-fast);
 }
+
+.neo-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Buttons */
 .btn {
-  background: var(--primary-color);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--surface-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-raised-sm);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition-fast);
 }
-.btn:hover { background: var(--primary-hover); }
-.input-group { margin-bottom: 1rem; }
-.input-group label { display: block; margin-bottom: 0.5rem; }
-.input-group input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-color);
-  color: var(--text-primary);
+
+.btn:hover {
+    color: var(--accent-blue);
 }
-.errorlist { color: var(--error-color); list-style: none; padding: 0; margin-top: 0.5rem; }
+
+.btn:active {
+    box-shadow: var(--shadow-pressed);
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background: var(--accent-blue);
+    color: white;
+    box-shadow: 4px 4px 10px rgba(71, 118, 230, 0.3);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: var(--accent-blue-hover);
+    color: white;
+}
+
+.btn-icon {
+    padding: 0.75rem;
+    border-radius: var(--radius-full);
+}
+
+.btn-danger {
+    color: var(--error-color);
+}
+
+/* Inputs & Forms */
+.neo-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--surface-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-pressed);
+    outline: none;
+    transition: all var(--transition-fast);
+}
+
+.neo-input:focus {
+    border-color: var(--accent-blue);
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Progress Indicator */
+.progress-track {
+    width: 100%;
+    height: 12px;
+    background: var(--surface-color);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-pressed);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+    border-radius: var(--radius-full);
+    transition: width 0.4s ease;
+}
+
+/* Tables */
+.neo-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+}
+
+.neo-table th {
+    text-align: left;
+    padding: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.neo-table td {
+    padding: 1rem;
+    background: var(--surface-color);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.neo-table td:first-child {
+    border-left: 1px solid var(--border-color);
+    border-top-left-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+}
+
+.neo-table td:last-child {
+    border-right: 1px solid var(--border-color);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+.neo-table tr:hover td {
+    box-shadow: var(--shadow-raised-sm);
+}
+
+/* Badges */
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-pressed);
+}
+.badge-healthy { color: var(--success-color); }
+.badge-offline { color: var(--error-color); }
