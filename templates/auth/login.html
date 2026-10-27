@@ -1,22 +1,32 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card" style="max-width: 400px; margin: auto;">
-    <h2>Log In</h2>
+<div class="neo-card" style="max-width: 420px; margin: 4rem auto;">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Welcome Back</h2>
     <form method="post">
         {% csrf_token %}
-        {{ form.non_field_errors }}
+        {% if form.non_field_errors %}
+            <div style="color: var(--error-color); margin-bottom: 1rem; text-align: center;">{{ form.non_field_errors }}</div>
+        {% endif %}
+        
         {% for field in form %}
             <div class="input-group">
                 {{ field.label_tag }}
-                {{ field }}
-                {{ field.errors }}
-                {% if 'password' in field.name %}
-                    <button type="button" class="toggle-password btn" data-target="{{ field.id_for_label }}" aria-pressed="false" style="margin-top: 5px; font-size: 0.8rem;">Show password</button>
+                {{ field }} 
+                <!-- Ensure django form fields are given the class 'neo-input' in forms.py, or style input directly -->
+                {% if field.errors %}
+                    <span style="color: var(--error-color); font-size: 0.85rem;">{{ field.errors.0 }}</span>
                 {% endif %}
             </div>
         {% endfor %}
-        <button type="submit" class="btn" style="width: 100%;">Log In</button>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 1rem;">Secure Login</button>
     </form>
-    <p style="margin-top: 1rem;"><a href="{% url 'password_reset' %}">Forgot password?</a></p>
+    <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+        Need an account? <a href="{% url 'register' %}" style="color: var(--accent-blue);">Register here</a>.
+    </p>
 </div>
+<script>
+    // Automatically apply neo-input class to standard Django form inputs
+    document.querySelectorAll('input').forEach(input => input.classList.add('neo-input'));
+</script>
 {% endblock %}
