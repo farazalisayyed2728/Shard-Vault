@@ -1,74 +1,116 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="bento-grid">
-    <div class="bento-card span-4">
-        <h3>Storage Usage</h3>
-        <p>{{ used_mb }} MB / {{ quota_mb }} MB</p>
-        <div class="progress-bar-bg" style="background:var(--border-color); height:10px; border-radius:5px;">
-            <div class="progress-bar-fill" style="background:var(--primary-color); height:100%; width:{{ usage_pct }}%; border-radius:5px;"></div>
+<div style="margin-bottom: 2rem;">
+    <h1 style="margin: 0; font-size: 1.8rem;">Storage Dashboard</h1>
+    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Welcome back to your distributed workspace.</p>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Metrics -->
+    <div class="neo-card metric-card">
+        <h4>Used Storage</h4>
+        <p class="metric-value">{{ used_mb }} <span style="font-size:1rem; color:var(--text-secondary);">MB</span></p>
+    </div>
+    <div class="neo-card metric-card">
+        <h4>Total Quota</h4>
+        <p class="metric-value">{{ quota_mb }} <span style="font-size:1rem; color:var(--text-secondary);">MB</span></p>
+    </div>
+    <div class="neo-card metric-card">
+        <h4>Active Nodes</h4>
+        <p class="metric-value" id="node-count-metric">--</p>
+    </div>
+    <div class="neo-card metric-card">
+        <h4>Repair Queue</h4>
+        <p class="metric-value" id="repair-count-metric">--</p>
+    </div>
+
+    <!-- Usage & Upload -->
+    <div class="neo-card section-usage">
+        <h3 style="margin-top:0;">Capacity</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">{{ usage_pct }}% consumed across the cluster.</p>
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {{ usage_pct }}%;"></div>
         </div>
     </div>
 
-    <div class="bento-card span-4">
-        <h3>Cluster Health</h3>
-        <ul id="node-status-list" style="list-style:none; padding:0; margin:0 0 1rem 0;">
-            <li>Loading node status...</li>
-        </ul>
-        <p style="margin:0; font-size:0.9rem;">
-            Chunks needing repair: <strong id="repair-count">--</strong>
-        </p>
-    </div>
-    
-    <div class="bento-card span-8">
-        <h3>Upload File</h3>
-        <div id="upload-zone" style="border: 2px dashed var(--border-color); padding: 2rem; text-align: center; border-radius: var(--radius-md);">
-            <input type="file" id="file-input" style="display:none;">
-            <button id="file-select-button" class="btn">Select File</button>
-            <p>or drag and drop here</p>
-            <div id="upload-progress-container" style="display:none; margin-top:1rem;">
-                <p id="upload-status">Uploading...</p>
-                <progress id="upload-progress" value="0" max="100" style="width:100%;"></progress>
-            </div>
+    <div class="neo-card section-upload" id="upload-zone">
+        <input type="file" id="file-input" style="display:none;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" style="margin-bottom: 1rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Upload File</button>
+        <div id="upload-progress-container" style="display:none; width:100%; margin-top:1.5rem;">
+            <p id="upload-status" style="margin-bottom:0.5rem; font-size:0.9rem;">Encrypting & Distributing...</p>
+            <div class="progress-track"><div class="progress-fill" id="upload-progress" style="width:0%;"></div></div>
         </div>
     </div>
 
-    <div class="bento-card span-12">
-        <h3>Recent Files</h3>
-        <table class="recent-files-table" style="width: 100%; text-align: left; border-collapse: collapse;">
-            <thead>
-                <tr><th scope="col">Name</th><th scope="col">Size</th><th scope="col">Date</th><th scope="col">Actions</th></tr>
-            </thead>
-            <tbody>
-                {% for file in recent_files %}
-                <tr>
-                    <td data-label="Name">{{ file.display_name }}</td>
-                    <td data-label="Size">{{ file.original_size|filesizeformat }}</td>
-                    <td data-label="Date">{{ file.created_at|date:"M d, Y" }}</td>
-                    <td data-label="Actions"><a href="{% url 'download_file' file.internal_key %}" class="btn">Download</a></td>
-                </tr>
-                {% empty %}
-                <tr class="recent-files-empty-row"><td class="recent-files-empty" colspan="4">No files uploaded yet.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Architecture Visual -->
+    <div class="neo-card section-architecture">
+        <svg width="100%" height="200" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
+            <!-- Lines -->
+            <path d="M 150 100 C 300 100, 350 50, 600 50" fill="none" stroke="var(--border-color)" stroke-width="3" />
+            <path d="M 150 100 C 300 100, 350 100, 600 100" fill="none" stroke="var(--border-color)" stroke-width="3" />
+            <path d="M 150 100 C 300 100, 350 150, 600 150" fill="none" stroke="var(--border-color)" stroke-width="3" />
+            
+            <!-- Animated Pulses -->
+            <path d="M 150 100 C 300 100, 350 50, 600 50" fill="none" stroke="var(--accent-cyan)" stroke-width="2" class="svg-pulse" />
+            <path d="M 150 100 C 300 100, 350 100, 600 100" fill="none" stroke="var(--accent-cyan)" stroke-width="2" class="svg-pulse" style="animation-delay: 1s;" />
+            
+            <!-- Nodes -->
+            <circle cx="150" cy="100" r="30" fill="var(--surface-color)" stroke="var(--accent-blue)" stroke-width="4" />
+            <text x="150" y="105" text-anchor="middle" fill="var(--text-primary)" font-weight="bold">Django</text>
+            
+            <circle cx="600" cy="50" r="20" fill="var(--surface-color)" stroke="var(--border-color)" stroke-width="3" />
+            <text x="640" y="55" fill="var(--text-secondary)">Storage Node 1</text>
+            
+            <circle cx="600" cy="100" r="20" fill="var(--surface-color)" stroke="var(--border-color)" stroke-width="3" />
+            <text x="640" y="105" fill="var(--text-secondary)">Storage Node 2</text>
+            
+            <circle cx="600" cy="150" r="20" fill="var(--surface-color)" stroke="var(--border-color)" stroke-width="3" />
+            <text x="640" y="155" fill="var(--text-secondary)">Storage Node 3</text>
+        </svg>
     </div>
 
-    <div class="bento-card span-12">
-        <h3>Frequently Asked Questions</h3>
-        <details style="margin-bottom: 1rem;">
-            <summary style="cursor:pointer; font-weight:bold;">How is my data encrypted?</summary>
-            <p style="margin-top:0.5rem; color:var(--text-secondary);">We use envelope encryption. Every file generates a unique AES-256-GCM data key. Chunks are encrypted locally before being distributed to storage nodes.</p>
-        </details>
-        <details style="margin-bottom: 1rem;">
-            <summary style="cursor:pointer; font-weight:bold;">What happens if a node goes offline?</summary>
-            <p style="margin-top:0.5rem; color:var(--text-secondary);">We enforce a replication factor of 3. If a node fails, your file is served from another healthy replica, and a background worker duplicates it to a new node to maintain redundancy.</p>
-        </details>
-        <details>
-            <summary style="cursor:pointer; font-weight:bold;">How long do Share Links last?</summary>
-            <p style="margin-top:0.5rem; color:var(--text-secondary);">You can define a maximum download limit or an expiration date when generating the link. You can also revoke them manually at any time.</p>
-        </details>
+    <!-- Recent Files -->
+    <div class="neo-card section-files" style="padding: 0; overflow: hidden;">
+        <h3 style="padding: 1.5rem 2rem 0.5rem; margin:0;">Recent Files</h3>
+        <div style="overflow-x: auto;">
+            <table class="neo-table" style="border-spacing: 0;">
+                <thead>
+                    <tr><th>Name</th><th>Size</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for file in recent_files %}
+                    <tr>
+                        <td style="padding-left: 2rem;"><strong>{{ file.display_name }}</strong></td>
+                        <td>{{ file.original_size|filesizeformat }}</td>
+                        <td>{{ file.created_at|date:"M d, Y" }}</td>
+                        <td><span class="badge badge-healthy">Ready</span></td>
+                        <td style="padding-right: 2rem;">
+                            <a href="{% url 'download_file' file.internal_key %}" class="btn btn-icon">↓</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align: center; padding: 2rem;">No files uploaded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
 <script src="/static/js/upload.js"></script>
-<script src="/static/js/dashboard.js"></script>
+<script>
+    async function pollStatus() {
+        if(document.hidden) return;
+        try {
+            const res = await fetch('/files/api/status/');
+            const data = await res.json();
+            const healthyNodes = data.nodes.filter(n => n.status === 'healthy').length;
+            document.getElementById('node-count-metric').textContent = healthyNodes + ' / ' + data.nodes.length;
+            document.getElementById('repair-count-metric').textContent = data.under_replicated;
+        } catch(e) {}
+    }
+    setInterval(pollStatus, 10000);
+    pollStatus();
+</script>
 {% endblock %}
