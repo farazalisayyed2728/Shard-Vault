@@ -8,7 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 django.setup()
 
-from apps.files.models import StorageNode
+from apps.files.models import StorageNode  # noqa: E402
 
 
 nodes = [

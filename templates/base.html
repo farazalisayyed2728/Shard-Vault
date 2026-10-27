@@ -6,6 +6,7 @@
     <title>ShardVault</title>
     <link rel="stylesheet" href="/static/css/tokens.css">
     <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/bento.css">
     <link rel="stylesheet" href="/static/css/components.css">
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/app.js" defer></script>
@@ -14,7 +15,7 @@
     <a href="#main" class="skip-link">Skip to content</a>
     <header>
         <div class="logo"><strong>ShardVault</strong></div>
-        <button id="mobile-menu-btn" aria-expanded="false" aria-label="Toggle menu">☰</button>
+        <button id="mobile-menu-btn" class="btn" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle menu">☰</button>
         <nav id="main-nav">
             {% if user.is_authenticated %}
                 <a href="{% url 'dashboard' %}">Dashboard</a>
@@ -44,32 +45,12 @@
     <button id="back-to-top" class="btn" aria-label="Back to top" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000;">↑ Top</button>
 
     <!-- Floating Contact Button -->
-    <button class="btn" style="position:fixed; bottom:20px; left:20px; border-radius:50%; width:50px; height:50px; font-size:1.5rem; z-index:1000;" onclick="alert('Contact form would open here.')">💬</button>
+    <button id="contact-button" class="btn" style="position:fixed; bottom:20px; left:20px; border-radius:50%; width:50px; height:50px; font-size:1.5rem; z-index:1000;" aria-label="Contact support">💬</button>
 
     <!-- Cookie Notice -->
     <div id="cookie-notice" style="display:none; position:fixed; bottom:0; left:0; right:0; background:var(--surface-color); padding:1rem; border-top:1px solid var(--border-color); z-index:1001; text-align:center;">
         <p style="margin:0 0 1rem 0;">We use essential cookies for session management and authentication. No third-party tracking is used.</p>
-        <button class="btn" onclick="acceptCookies()">Understood</button>
+        <button id="accept-cookies" class="btn">Understood</button>
     </div>
-
-    <script>
-        // Cookie Notice Logic
-        if (!localStorage.getItem('cookies_accepted')) {
-            document.getElementById('cookie-notice').style.display = 'block';
-        }
-        function acceptCookies() {
-            localStorage.setItem('cookies_accepted', 'true');
-            document.getElementById('cookie-notice').style.display = 'none';
-        }
-
-        // Privacy-conscious UTM Tracking
-        const params = new URLSearchParams(window.location.search);
-        const utmSource = params.get('utm_source');
-        if (utmSource) {
-            // Store temporarily in session, do not send to 3rd parties
-            sessionStorage.setItem('utm_source', utmSource);
-            sessionStorage.setItem('utm_campaign', params.get('utm_campaign'));
-        }
-    </script>
 </body>
 </html>

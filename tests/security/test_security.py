@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 from apps.accounts.models import User
-from apps.files.models import StoredFile, ShareLink
+from apps.files.models import StoredFile
 
 @pytest.fixture
 def users(db):

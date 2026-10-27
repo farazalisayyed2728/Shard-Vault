@@ -31,3 +31,45 @@ main {
   z-index: 200;
 }
 .skip-link:focus { top: 0; }
+header nav {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+header nav a {
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: color 0.2s;
+}
+header nav a:hover {
+    color: var(--primary-color);
+}
+#mobile-menu-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    header {
+        flex-wrap: wrap;
+        padding: 1rem;
+    }
+
+    #mobile-menu-btn {
+        display: block;
+        margin-left: auto;
+    }
+
+    header nav {
+        display: none;
+        flex: 0 0 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding-top: 1rem;
+    }
+
+    header nav.open {
+        display: flex;
+    }
+}

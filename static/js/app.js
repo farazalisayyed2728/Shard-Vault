@@ -20,6 +20,53 @@ document.addEventListener('DOMContentLoaded', () => {
             nav.classList.toggle('open');
         });
     }
+
+    const contactButton = document.getElementById('contact-button');
+    if (contactButton) {
+        contactButton.addEventListener('click', () => {
+            alert('Contact form would open here.');
+        });
+    }
+
+    const cookieNotice = document.getElementById('cookie-notice');
+    const acceptCookiesButton = document.getElementById('accept-cookies');
+    if (cookieNotice && acceptCookiesButton && !localStorage.getItem('cookies_accepted')) {
+        cookieNotice.style.display = 'block';
+        acceptCookiesButton.addEventListener('click', () => {
+            localStorage.setItem('cookies_accepted', 'true');
+            cookieNotice.style.display = 'none';
+        });
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get('utm_source');
+    if (utmSource) {
+        sessionStorage.setItem('utm_source', utmSource);
+        const utmCampaign = params.get('utm_campaign');
+        if (utmCampaign) {
+            sessionStorage.setItem('utm_campaign', utmCampaign);
+        }
+    }
+
+    const fileSelectButton = document.getElementById('file-select-button');
+    const fileInput = document.getElementById('file-input');
+    if (fileSelectButton && fileInput) {
+        fileSelectButton.addEventListener('click', () => fileInput.click());
+    }
+
+    const copyShareLinkButton = document.getElementById('copy-share-link');
+    const shareUrl = document.getElementById('share-url');
+    if (copyShareLinkButton && shareUrl) {
+        copyShareLinkButton.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareUrl.value);
+                alert('Copied!');
+            } catch (error) {
+                console.error('Could not copy share link', error);
+                alert('Could not copy the link. Please copy it manually.');
+            }
+        });
+    }
 });
 
 // App.js global additions (Scroll + Top + Search shortcut)

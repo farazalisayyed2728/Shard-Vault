@@ -2,13 +2,24 @@
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(12, 1fr);
+    align-items: start;
 }
 .bento-card {
     background: var(--surface-color);
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
+    padding: 2rem;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.bento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.bento-card h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
 }
 .span-4 { grid-column: span 4; }
 .span-8 { grid-column: span 8; }
@@ -17,6 +28,59 @@
     position: fixed; top: 0; left: 0; height: 3px; background: var(--primary-color);
     width: 0%; z-index: 1000; transition: width 0.1s;
 }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .span-4, .span-8, .span-12 { grid-column: span 12; }
+}
+
+@media (max-width: 600px) {
+    .bento-card {
+        padding: 1.25rem;
+    }
+
+    .recent-files-table,
+    .recent-files-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    .recent-files-table thead {
+        display: none;
+    }
+
+    .recent-files-table tbody tr:not(.recent-files-empty-row) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.65rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .recent-files-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        min-width: 0;
+        padding: 0;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .recent-files-table td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-align: left;
+    }
+
+    .recent-files-table td[data-label="Actions"] {
+        align-items: center;
+    }
+
+    .recent-files-table .recent-files-empty {
+        display: block;
+        padding: 0.5rem 0;
+        text-align: left;
+    }
 }

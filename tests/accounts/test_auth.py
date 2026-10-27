@@ -1,6 +1,5 @@
 import pytest
 from django.urls import reverse
-from apps.accounts.models import User
 
 @pytest.mark.django_db
 def test_user_registration(client):

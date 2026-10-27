@@ -1,12 +1,13 @@
-import os
 from pathlib import Path
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+environ.Env.read_env(BASE_DIR / ".env")
 env = environ.Env()
 
 SECRET_KEY = env('SECRET_KEY', default='unsafe-secret')
 HMAC_SECRET = env('HMAC_SECRET', default='dev-hmac-secret-do-not-use-in-prod')
+FILE_ENCRYPTION_KEY = env('FILE_ENCRYPTION_KEY', default=SECRET_KEY)
 DEBUG = False
 ALLOWED_HOSTS = ['*']
 

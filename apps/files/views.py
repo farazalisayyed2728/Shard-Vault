@@ -1,16 +1,19 @@
 import concurrent.futures
 import hashlib
 import json
+import math
+import re
 import secrets
 
 import httpx
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, Sum
 from django.http import Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import content_disposition_header
 from django_ratelimit.decorators import ratelimit
 from django.views.decorators.http import require_http_methods
 
@@ -24,7 +27,13 @@ from .utils import (
     encrypt_data,
     generate_encryption_key,
     generate_hmac_headers,
+    unwrap_data_key,
+    wrap_data_key,
 )
+
+MAX_FILE_SIZE = 100 * 1024 * 1024
+CHUNK_SIZE = 4 * 1024 * 1024
+
 
 @login_required
 def dashboard_view(request):
@@ -53,48 +62,100 @@ def trash_view(request):
 
 @login_required
 @require_http_methods(["POST"])
+@ratelimit(key='user', rate='10/m', block=True)
 def init_upload(request):
-    data = json.loads(request.body)
-    size = int(data.get('size', 0))
-    if size > 100 * 1024 * 1024:
-        return JsonResponse({'error': 'File exceeds 100MB limit'}, status=400)
-    
-    if request.user.used_bytes + size > request.user.quota_bytes:
-        return JsonResponse({'error': 'Quota exceeded'}, status=400)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid JSON request body'}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({'error': 'Request body must be a JSON object'}, status=400)
 
-    f = StoredFile.objects.create(
-        owner=request.user,
-        display_name=data.get('name', 'unnamed'),
-        original_size=size,
-        mime_type=data.get('mime_type', 'application/octet-stream'),
-        wrapped_data_key=generate_encryption_key() 
-    )
-    return JsonResponse({'upload_id': str(f.internal_key), 'chunk_size': 4 * 1024 * 1024})
+    size = data.get('size')
+    if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+        return JsonResponse({'error': 'size must be a non-negative integer'}, status=400)
+    if size > MAX_FILE_SIZE:
+        return JsonResponse({'error': 'File exceeds 100MB limit'}, status=400)
+
+    name = data.get('name', 'unnamed')
+    mime_type = data.get('mime_type', 'application/octet-stream')
+    if not isinstance(name, str) or not name.strip() or len(name) > 255:
+        return JsonResponse({'error': 'name must be a non-empty string of at most 255 characters'}, status=400)
+    if not isinstance(mime_type, str) or len(mime_type) > 127:
+        return JsonResponse({'error': 'mime_type must be a string of at most 127 characters'}, status=400)
+
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        pending_bytes = (
+            StoredFile.objects.filter(
+                owner=user,
+                status='uploading',
+                deleted_at__isnull=True,
+            ).aggregate(total=Sum('original_size'))['total']
+            or 0
+        )
+        if user.used_bytes + pending_bytes + size > user.quota_bytes:
+            return JsonResponse({'error': 'Quota exceeded'}, status=400)
+
+        wrapped_data_key, key_wrapping_nonce = wrap_data_key(generate_encryption_key())
+        stored_file = StoredFile.objects.create(
+            owner=user,
+            display_name=name.strip(),
+            original_size=size,
+            mime_type=mime_type or 'application/octet-stream',
+            wrapped_data_key=wrapped_data_key,
+            key_wrapping_nonce=key_wrapping_nonce,
+        )
+    return JsonResponse({'upload_id': str(stored_file.internal_key), 'chunk_size': CHUNK_SIZE})
 
 @login_required
 @require_http_methods(["PUT"])
+@ratelimit(key='user', rate='100/m', block=True)
 def upload_chunk(request, upload_id, index):
-    f = get_object_or_404(StoredFile, internal_key=upload_id, owner=request.user, status='uploading')
+    f = get_object_or_404(
+        StoredFile,
+        internal_key=upload_id,
+        owner=request.user,
+        status='uploading',
+        deleted_at__isnull=True,
+    )
+    expected_chunks = math.ceil(f.original_size / CHUNK_SIZE)
+    if index < 0 or index >= expected_chunks:
+        return JsonResponse({'error': 'Chunk index is outside the upload'}, status=400)
+
     data = request.body
-    key = bytes(f.wrapped_data_key)
-    
-    # Encrypt
+    expected_size = min(CHUNK_SIZE, f.original_size - index * CHUNK_SIZE)
+    if len(data) != expected_size:
+        return JsonResponse({'error': 'Chunk size does not match the expected size'}, status=400)
+
+    key = unwrap_data_key(f)
     nonce, ciphertext = encrypt_data(key, data)
     plaintext_hash = hashlib.sha256(data).hexdigest()
     cipher_hash = hashlib.sha256(ciphertext).hexdigest()
-    
-    # Save Metadata Atomically
+
     with transaction.atomic():
+        f = get_object_or_404(
+            StoredFile.objects.select_for_update(),
+            pk=f.pk,
+            owner=request.user,
+            status='uploading',
+            deleted_at__isnull=True,
+        )
         chunk, _ = Chunk.objects.update_or_create(
             file=f, chunk_index=index,
-            defaults={'plaintext_size': len(data), 'plaintext_sha256': plaintext_hash, 'ciphertext_sha256': cipher_hash, 'encryption_nonce': nonce}
+            defaults={
+                'plaintext_size': len(data),
+                'plaintext_sha256': plaintext_hash,
+                'ciphertext_sha256': cipher_hash,
+                'encryption_nonce': nonce,
+            },
         )
-        
+        chunk.replica_set.update(state='pending')
+
     nodes = list(StorageNode.objects.filter(status='healthy'))
     if len(nodes) < 2:
         return JsonResponse({'error': 'Not enough healthy nodes'}, status=503)
 
-    # Distribute to nodes (Write Quorum = 2)
     def send_to_node(node):
         path = f"/chunks/{chunk.chunk_uuid}"
         url = f"{node.internal_url}{path}"
@@ -104,32 +165,58 @@ def upload_chunk(request, upload_id, index):
             if r.status_code == 200:
                 Replica.objects.update_or_create(chunk=chunk, storage_node=node, defaults={'state': 'ok'})
                 return True
-        except Exception:
-            pass
+        except httpx.HTTPError:
+            return False
         return False
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         results = list(executor.map(send_to_node, nodes[:3]))
-        
+
     if sum(results) < 2:
         return JsonResponse({'error': 'Write quorum failed'}, status=500)
-        
+
     return JsonResponse({'status': 'ok'})
 
 @login_required
 @require_http_methods(["POST"])
 def complete_upload(request, upload_id):
-    f = get_object_or_404(StoredFile, internal_key=upload_id, owner=request.user, status='uploading')
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid JSON request body'}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({'error': 'Request body must be a JSON object'}, status=400)
+    checksum = data.get('sha256_checksum', '')
+    if not isinstance(checksum, str) or not re.fullmatch(r'[0-9a-f]{64}', checksum):
+        return JsonResponse({'error': 'A valid SHA-256 checksum is required'}, status=400)
 
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=request.user.pk)
+        f = get_object_or_404(
+            StoredFile.objects.select_for_update(),
+            internal_key=upload_id,
+            owner=user,
+            status='uploading',
+            deleted_at__isnull=True,
+        )
         if user.used_bytes + f.original_size > user.quota_bytes:
             return JsonResponse({'error': 'Quota exceeded'}, status=400)
+
+        chunks = f.chunk_set.order_by('chunk_index')
+        expected_count = math.ceil(f.original_size / CHUNK_SIZE)
+        if chunks.count() != expected_count:
+            return JsonResponse({'error': 'Upload is missing chunks'}, status=400)
+        for expected_index, chunk in enumerate(chunks):
+            expected_size = min(CHUNK_SIZE, f.original_size - expected_index * CHUNK_SIZE)
+            if chunk.chunk_index != expected_index or chunk.plaintext_size != expected_size:
+                return JsonResponse({'error': 'Uploaded chunks are incomplete or invalid'}, status=400)
+            if chunk.replica_set.filter(state='ok').count() < 2:
+                return JsonResponse({'error': 'A chunk does not have the required write quorum'}, status=400)
 
         user.used_bytes += f.original_size
         user.save()
         f.status = 'ready'
-        f.sha256_checksum = json.loads(request.body).get('sha256_checksum', '')
+        f.sha256_checksum = checksum
         f.save()
 
     log_audit(request, 'upload_complete', 'StoredFile', f.internal_key)
@@ -145,13 +232,19 @@ def download_file(request, file_id):
 @login_required
 @require_http_methods(["POST"])
 def delete_file(request, file_id):
-    f = get_object_or_404(StoredFile, internal_key=file_id, owner=request.user, deleted_at__isnull=True)
-    f.deleted_at = timezone.now()
-    f.save()
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=request.user.pk)
-        user.used_bytes = max(0, user.used_bytes - f.original_size)
-        user.save()
+        f = get_object_or_404(
+            StoredFile.objects.select_for_update(),
+            internal_key=file_id,
+            owner=user,
+            deleted_at__isnull=True,
+        )
+        if f.status == 'ready':
+            user.used_bytes = max(0, user.used_bytes - f.original_size)
+            user.save(update_fields=['used_bytes'])
+        f.deleted_at = timezone.now()
+        f.save(update_fields=['deleted_at', 'updated_at'])
     log_audit(request, 'soft_delete', 'StoredFile', f.internal_key)
     return redirect('file_list')
 
@@ -185,6 +278,7 @@ def create_share_link(request, file_id):
     return render(request, 'files/share_link.html', {'raw_token': raw_token, 'file': f})
 
 @ratelimit(key='ip', rate='10/m', block=True)
+@require_http_methods(["GET"])
 def public_share_download(request, token):
     hashed_token = hashlib.sha256(token.encode()).hexdigest()
     link = get_object_or_404(ShareLink, hashed_token=hashed_token)
@@ -208,7 +302,7 @@ def public_share_download(request, token):
     return _stream_file(f)
 
 def _stream_file(f):
-    key = bytes(f.wrapped_data_key)
+    key = unwrap_data_key(f)
 
     def file_iterator():
         for chunk in f.chunk_set.all().order_by('chunk_index'):
@@ -230,7 +324,10 @@ def _stream_file(f):
                 raise Exception("Chunk missing")
 
     response = StreamingHttpResponse(file_iterator(), content_type=f.mime_type or 'application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{f.display_name}"'
+    response['Content-Disposition'] = content_disposition_header(
+        as_attachment=True,
+        filename=f.display_name,
+    )
     response['X-Content-Type-Options'] = 'nosniff'
     return response
 
