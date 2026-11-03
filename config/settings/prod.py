@@ -3,11 +3,20 @@ from django.core.exceptions import ImproperlyConfigured
 
 DEBUG = False
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])  # noqa: F405
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured('Set ALLOWED_HOSTS in production.')
+
+for vercel_host in (
+    '.vercel.app',
+    env('VERCEL_URL', default=''),  # noqa: F405
+    env('VERCEL_PROJECT_PRODUCTION_URL', default=''),  # noqa: F405
+):
+    if vercel_host and vercel_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(vercel_host)
+
 FILE_ENCRYPTION_KEY = env('FILE_ENCRYPTION_KEY', default='')  # noqa: F405
 if len(SECRET_KEY) < 50 or SECRET_KEY == 'unsafe-secret':  # noqa: F405
     raise ImproperlyConfigured('Set a strong SECRET_KEY in production.')
-if not ALLOWED_HOSTS:
-    raise ImproperlyConfigured('Set ALLOWED_HOSTS in production.')
 if len(HMAC_SECRET) < 32 or HMAC_SECRET == 'dev-hmac-secret-do-not-use-in-prod':  # noqa: F405
     raise ImproperlyConfigured('Set a strong HMAC_SECRET in production.')
 if (
