@@ -11,14 +11,13 @@ HMAC_SECRET = env('HMAC_SECRET', default='dev-hmac-secret-do-not-use-in-prod')
 FILE_ENCRYPTION_KEY = env('FILE_ENCRYPTION_KEY', default=SECRET_KEY)
 DEBUG = False
 
-
 ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv(
-        "DJANGO_ALLOWED_HOSTS",
-        "localhost,127.0.0.1"
-    ).split(",")
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    ".vercel.app",
 ]
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
